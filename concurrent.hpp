@@ -16,10 +16,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef CONCURRENT_HPP
-#define CONCURRENT_HPP
+#ifndef CONCURRENT_CONCURRENT_HPP
+#define CONCURRENT_CONCURRENT_HPP
 
 #include "spsc_ringbuffer.hpp"
+#include "mpsc_stack.hpp"
 
 #endif
 
