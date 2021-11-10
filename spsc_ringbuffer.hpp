@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef SPSC_RINGBUFFER_HPP
-#define SPSC_RINGBUFFER_HPP
+#ifndef CONCURRENT_SPSC_RINGBUFFER_HPP
+#define CONCURRENT_SPSC_RINGBUFFER_HPP
 
 #include <atomic>
 #include <cstdlib>
@@ -38,7 +38,12 @@ namespace concurrent {
 			inline const static size_t mask = size-1;
 			
 			ringbuffer() : _head(0), _tail(0) {}
+			ringbuffer(ringbuffer&&) = delete;
+			ringbuffer(const ringbuffer&) = delete;
 			~ringbuffer() {}
+			
+			ringbuffer& operator=(ringbuffer&&) = delete;
+			ringbuffer& operator=(const ringbuffer&) = delete;
 			
 			inline bool is_empty() const { return _head == _tail; }
 			inline bool is_not_empty() const { return !is_empty(); }
