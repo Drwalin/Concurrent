@@ -103,13 +103,13 @@ namespace concurrent {
 		const_iterator __f_end() const { return const_iterator(); }
 		
 		inline T*const __f_last() const {
-			T*const it = this;
+			T*const it = (T*)this;
 			for(; it->__m_next; it=it->__m_next) {
 			}
 			return it;
 		}
 		inline T* __f_last() {
-			T* it = this;
+			T* it = (T*)this;
 			for(; it->__m_next; it=it->__m_next) {
 			}
 			return it;
