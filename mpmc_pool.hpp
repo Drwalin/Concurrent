@@ -66,7 +66,7 @@ namespace concurrent {
 				return new T(args...);
 			}
 			
-			inline void relese(T* ptr) {
+			inline void release(T* ptr) {
 				stack.push(ptr);
 				++approximate_pool_size;
 			}
