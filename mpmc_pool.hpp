@@ -54,7 +54,7 @@ namespace concurrent {
 			}
 			
 			template<typename... _args_for_new_objecet>
-			inline T* aquire(_args_for_new_objecet... args) {
+			inline T* acquire(_args_for_new_objecet... args) {
 				{
 					std::lock_guard<std::mutex> lock(mutex);
 					T* ret = stack.pop();
