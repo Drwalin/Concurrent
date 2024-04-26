@@ -1,6 +1,6 @@
 /*
  *  Concurrent primitive data structures.
- *  Copyright (C) 2021 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2021-2024 Marek Zalewski aka Drwalin
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,10 +19,7 @@
 #ifndef CONCURRENT_NODE_STACK_HPP
 #define CONCURRENT_NODE_STACK_HPP
 
-#include <atomic>
 #include <cstdlib>
-#include <bit>
-#include <cinttypes>
 
 #include "node.hpp"
 
@@ -69,9 +66,13 @@ namespace nonconcurrent {
 		}
 		
 		inline void push_all(T* first) {
-			T* last = first->__f_last();
-			last->__m_next = head;
-			head = first;
+			if (head == nullptr) {
+				head = first;
+			} else {
+				T* last = first->__f_last();
+				last->__m_next = head;
+				head = first;
+			}
 		}
 		
 		inline void push_all(T* first, T* last) {

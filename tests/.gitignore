@@ -1,0 +1,5 @@
+hash
+*.gcov
+*.info
+*.gcda
+*.gcno
