@@ -1,6 +1,6 @@
 /*
  *  Concurrent primitive data structures.
- *  Copyright (C) 2021 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2021-2024 Marek Zalewski aka Drwalin
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #ifndef CONCURRECT_NODE_HPP
 #define CONCURRECT_NODE_HPP
+
+#include <atomic>
 
 namespace concurrent {
 	template<typename T>
@@ -117,7 +119,7 @@ namespace concurrent {
 		
 	public:
 		
-		T* __m_next;
+		std::atomic<T*> __m_next;
 	};
 }
 

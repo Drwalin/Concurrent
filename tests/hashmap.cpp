@@ -8,17 +8,16 @@ struct allocator {
 	allocator(uint64_t count) {
 		this->count = count;
 		nodes = new T*[count];
+		all = new T[count];
 		for(uint64_t i=0; i<count; ++i) {
-			nodes[i] = new T();
+			nodes[i] = &(all[i]);
 		}
 		head = 0;
 		tail = 0;
 	}
 	
 	~allocator() {
-		for(uint64_t i=0; i<count; ++i) {
-			delete nodes[i];
-		}
+		delete[] all;
 	}
 	
 	using T = concurrent::mpmc::kp<uint64_t, uint64_t>
@@ -34,10 +33,11 @@ struct allocator {
 		nodes[id] = ptr;
 	}
 	
+	T* all;
 	T** nodes;
 	uint64_t count;
 	std::atomic<uint64_t> head, tail;
-} _def_alloc(1024*1024*256);
+} _def_alloc(1024*1024*256/512);
 
 concurrent::mpmc::kp<uint64_t, uint64_t>
 	::hashmap<concurrent::default_hash::hash<uint64_t>, 64, allocator::T, allocator> hashmap(16777619, &_def_alloc);
@@ -131,7 +131,7 @@ void verify() {
 }
 
 int main() {
-	int mult = 10000000;
+	int mult = 10000000/1000;
 	
 	for(int i=0; i<10*mult; ++i) {
 		uint64_t k=random(), v=random();

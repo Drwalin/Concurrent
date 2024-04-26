@@ -1,6 +1,6 @@
 /*
  *  Concurrent primitive data structures.
- *  Copyright (C) 2021 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2021-2024 Marek Zalewski aka Drwalin
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +21,7 @@
 
 #include <atomic>
 #include <cstdlib>
-#include <bit>
-#include <cinttypes>
 
-#include "node.hpp"
 #include "node_stack.hpp"
 
 namespace concurrent {
@@ -34,7 +31,7 @@ namespace concurrent {
 		public:
 			
 			stack() : head(NULL) {}
-			stack(stack&&o) : head(o.head) { o.head = NULL; }
+			stack(stack&&o) : head(o.pop_all()) {}
 			stack(const stack&) = delete;
 			~stack() {
 				nonconcurrent::node_stack<T> tmp;
@@ -43,17 +40,27 @@ namespace concurrent {
 					tmp.push_all(elems);
 			}
 			
-			inline stack& operator=(stack&&) = default;
+			// call to operator= is not thread safe at all
+			inline stack& operator=(stack&& other)
+			{
+				nonconcurrent::node_stack<T> tmp;
+				auto* elems = pop_all();
+				if(elems)
+					tmp.push_all(elems);
+				head = other.pop_all();
+			}
+			
 			inline stack& operator=(const stack&) = delete;
 			
+			// safe concurrently only without any other pop() not pop_all()
 			inline T* pop() {
 				for(;;) {
 					T* first = head;
 					if(first == NULL)
 						return NULL;
-					T* next = first->__m_next;
+					T* next = first->__m_next.load();
 					if(head.compare_exchange_strong(first, next)) {
-						first->__m_next = NULL;
+						first->__m_next.store(NULL);
 						return first;
 					}
 				}
@@ -61,10 +68,11 @@ namespace concurrent {
 			}
 			
 			inline void push(T* new_elem) {
-				new_elem->__m_next = NULL;
-				push_all(new_elem);
+				new_elem->__m_next.store(NULL);
+				push_all(new_elem, new_elem);
 			}
 			
+			// safe with other pop_all() but not with pop()
 			inline T* pop_all() {
 				for(;;) {
 					T* first = head;
@@ -81,8 +89,8 @@ namespace concurrent {
 			
 			inline void push_all(T* first, T* last) {
 				for(;;) {
-					last->__m_next = head;
-					if(head.compare_exchange_weak(last->__m_next, first))
+					last->__m_next.store(head);
+					if(head.compare_exchange_weak(last->__m_next.load(), first))
 						return;
 				}
 			}
