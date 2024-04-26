@@ -38,7 +38,9 @@ namespace concurrent {
 			stack(const stack&) = delete;
 			~stack() {
 				nonconcurrent::node_stack<T> tmp;
-				tmp.push_all(pop_all());
+				auto* elems = pop_all();
+				if(elems)
+					tmp.push_all(elems);
 			}
 			
 			inline stack& operator=(stack&&) = default;
