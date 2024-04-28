@@ -89,8 +89,9 @@ namespace concurrent {
 			
 			inline void push_all(T* first, T* last) {
 				for(;;) {
-					last->__m_next.store(head);
-					if(head.compare_exchange_weak(last->__m_next.load(), first))
+					T *old_head = head.load();
+					last->__m_next.store(old_head);
+					if(head.compare_exchange_weak(old_head, first))
 						return;
 				}
 			}
@@ -99,6 +100,10 @@ namespace concurrent {
 				T* last = first;
 				first = nonconcurrent::node_stack<T>::revert(first);
 				push_all(first, last);
+			}
+			
+			inline bool empty() const {
+				return !head;
 			}
 			
 		private:

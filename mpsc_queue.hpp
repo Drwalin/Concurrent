@@ -52,8 +52,20 @@ namespace concurrent {
 				input_stack.push(new_elem);
 			}
 			
+			inline bool empty() const {
+				return output_stack.empty() && input_stack.empty();
+			}
+			
+			inline stack<T> &get_input_stack() {
+				return input_stack;
+			}
+			
+			inline nonconcurrent::node_stack<T> &get_output_stack() {
+				return output_stack;
+			}
+			
 		private:
-			mpsc::stack<T> input_stack;
+			stack<T> input_stack;
 			nonconcurrent::node_stack<T> output_stack;
 		};
 	}

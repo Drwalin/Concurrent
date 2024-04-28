@@ -93,11 +93,15 @@ namespace concurrent {
 			node<T>*const it;
 		};
 		
-		node() : __m_next(0) {}
-		node(const node&) = delete;
-		node(node&) = delete;
+		node() = default;
+		node(const node&) = default;
+		node(node&) = default;
 		node(node&&) = default;
 		~node() = default;
+		
+		node &operator=(const node&) = default;
+		node &operator=(node&) = default;
+		node &operator=(node&&) = default;
 		
 		iterator __f_begin() { return iterator(this); }
 		iterator __f_end() { return iterator(); }
@@ -119,7 +123,7 @@ namespace concurrent {
 		
 	public:
 		
-		std::atomic<T*> __m_next;
+		std::atomic<T*> __m_next = 0;
 	};
 }
 
