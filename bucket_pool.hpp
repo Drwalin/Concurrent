@@ -20,12 +20,18 @@
 #define CONCURRENT_THREADED_POLL_HPP
 
 #include <cstdint>
+#include <cstdio>
 
 #include <atomic>
 #include <mutex>
-#include <new>
 
 #include "node_stack.hpp"
+
+namespace nonconcurrent
+{
+template<size_t BYTES, size_t OBJECTS_PER_BUCKET>
+class thread_local_pool;
+}
 
 namespace concurrent
 {
@@ -33,10 +39,7 @@ template<size_t BYTES>
 struct _byte_array : public concurrent::node<_byte_array<BYTES>>
 {
 };
-}
 
-namespace concurrent
-{
 template<size_t BYTES>
 class buckets_pool
 {
@@ -49,10 +52,15 @@ public:
 	buckets_pool(size_t max_buckets) : max_buckets(max_buckets) {
 		buckets = new std::atomic<byte_array*>[max_buckets];
 		sizes = new size_t[max_buckets];
+		for (int i=0; i<max_buckets; ++i) {
+			buckets[i] = NULL;
+			sizes[i] = 0;
+		}
 	}
 	~buckets_pool() {
-		delete buckets;
-		delete sizes;
+		free_all();
+		delete[] buckets;
+		delete[] sizes;
 		buckets = NULL;
 		sizes = NULL;
 	}
@@ -66,10 +74,13 @@ public:
 				return;
 			}
 		}
+		size_t c = 0;
 		while(bucket.empty() == false) {
-			::operator delete(bucket.pop());
-			++system_frees_count;
+			free(bucket.pop());
+			++c;
 		}
+		sum_object_release += count;
+		system_frees_count += c;
 	}
 	
 	byte_array *acquire_bucket(size_t *count) {
@@ -81,8 +92,9 @@ public:
 			}
 		}
 		*count = 1;
-		byte_array *ptr = (byte_array *)::operator new(BYTES);
+		byte_array *ptr = (byte_array *)malloc(BYTES);
 		++system_allocations_count;
+		++sum_object_acquisition;
 		ptr->__m_next = NULL;
 		return ptr;
 	}
@@ -112,8 +124,62 @@ public:
 		return current_memory_resident_objects() * BYTES;
 	}
 	
+	uint64_t count_objects_in_global_pool() const {
+		return objects_in_glob;
+		uint64_t sum = 0;
+		for (int i=0; i<buckets_count; ++i) {
+			sum += sizes[i];
+		}
+		return sum;
+	}
+	
 	static size_t single_block_size() {
 		return BYTES;
+	}
+	
+	void free_all() {
+		std::lock_guard lock(mutex);
+		for (int i=0; i<max_buckets; ++i) {
+			node_stack b;
+			if (buckets[i] != NULL) {
+				b.push_all(buckets[i]);
+			}
+			buckets[i] = NULL;
+			sizes[i] = 0;
+			while (!b.empty()) {
+				free(b.pop());
+				system_frees_count++;
+				objects_in_glob--;
+			}
+		}
+	}
+	
+	std::mutex mutex2;
+	template<size_t S>
+	nonconcurrent::node_stack<nonconcurrent::thread_local_pool<BYTES, S>> &mod_tls_pool(nonconcurrent::thread_local_pool<BYTES, S> *tls_pool, bool adding) {
+		static nonconcurrent::node_stack<nonconcurrent::thread_local_pool<BYTES, S>> stack;
+		std::lock_guard lock(mutex2);
+		if (tls_pool != NULL) {
+			if (adding) {
+				tls_pool->__m_next = NULL;
+				stack.push(tls_pool);
+			} else {
+				nonconcurrent::node_stack<nonconcurrent::thread_local_pool<BYTES, S>> tmp;
+				while (!stack.empty()) {
+					auto p = stack.pop();
+					if (p == tls_pool) {
+						break;
+					} else {
+						tmp.push(p);
+					}
+				}
+				if (tmp.empty() == false) {
+					stack.push_all(tmp.pop_all());
+				}
+			}
+		}
+		
+		return stack;
 	}
 	
 private:
@@ -121,13 +187,20 @@ private:
 		size_t id = buckets_count.load();
 		buckets[id] = bucket.pop_all();
 		sizes[id] = count;
+		objects_in_glob += count;
 		buckets_count++;
+		sum_object_release += count;
 	}
 	
 	byte_array *_internal_acquire_bucket(size_t *count) {
 		buckets_count--;
 		*count = sizes[buckets_count];
-		return buckets[buckets_count];
+		sizes[buckets_count] = 0;
+		byte_array *ret = buckets[buckets_count];
+		buckets[buckets_count] = NULL;
+		objects_in_glob -= *count;
+		sum_object_acquisition += *count;
+		return ret;
 	}
 	
 private:
@@ -141,31 +214,52 @@ private:
 	std::atomic<uint64_t> bucket_acquisitions_count = 0;
 	std::atomic<uint64_t> bucket_releases_count = 0;
 	std::atomic<size_t> buckets_count = 0;
+	std::atomic<uint64_t> objects_in_glob = 0;
 	
 public:
 	std::atomic<uint64_t> local_sum_acquisition = 0;
 	std::atomic<uint64_t> local_sum_release = 0;
+	
+	std::atomic<uint64_t> sum_object_acquisition = 0;
+	std::atomic<uint64_t> sum_object_release = 0;
 };
 }
 
 namespace nonconcurrent
 {
 template<size_t BYTES, size_t OBJECTS_PER_BUCKET>
-class thread_local_pool
+class thread_local_pool : public concurrent::node<thread_local_pool<BYTES, OBJECTS_PER_BUCKET>>
 {
 public:
 	
+	bool resident = true;
+	
 	thread_local_pool(concurrent::buckets_pool<BYTES> *buckets_pool) {
 		this->buckets_pool = buckets_pool;
+		buckets_pool->mod_tls_pool(this, true);
 	}
 	~thread_local_pool() {
-		
+		buckets_pool->mod_tls_pool(this, false);
+		release_buckets_to_global();
+		resident = false;
+	}
+	
+	void release_buckets_to_global() {
+		for (int i=0; i<2; ++i) {
+			_internal_swap();
+			if (size[1] > 0) {
+				_internal_release_one_bucket();
+			}
+		}
 	}
 	
 	using byte_array = concurrent::_byte_array<BYTES>;
 	
 	template<typename T, typename... Args>
 	T *acquire(Args... args) {
+		if (resident == false) {
+			return new(malloc(BYTES)) T(std::move(args)...);
+		}
 		static_assert(sizeof(T) <= BYTES);
 		buckets_pool->local_sum_acquisition++;
 		if (size[0] == 0) {
@@ -176,13 +270,17 @@ public:
 			}
 		}
 		size[0]--;
-		byte_array *ar = buckets[0].pop();
-		void *ptr = (void *)ar;
+		byte_array *ptr = buckets[0].pop();
 		return new(ptr) T(std::move(args)...);
 	}
 	
 	template<typename T>
 	void release(T *ptr) {
+		if (resident == false) {
+			ptr->~T();
+			free(ptr);
+			return;
+		}
 		buckets_pool->local_sum_release++;
 		ptr->~T();
 		if (size[1] >= OBJECTS_PER_BUCKET) {
@@ -193,6 +291,7 @@ public:
 			}
 		}
 		size[1]++;
+		ptr->__m_next = NULL;
 		buckets[1].push((byte_array*)ptr);
 	}
 	
