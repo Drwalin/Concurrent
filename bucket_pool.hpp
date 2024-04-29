@@ -20,7 +20,6 @@
 #define CONCURRENT_THREADED_POLL_HPP
 
 #include <cstdint>
-#include <cstdio>
 
 #include <atomic>
 #include <mutex>
