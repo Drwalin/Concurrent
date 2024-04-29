@@ -39,21 +39,28 @@ namespace concurrent {
 			iterator& operator=(iterator&&) = default;
 			iterator& operator=(node<T>* it) { this->it = it; return *this; }
 			
-			inline T& operator++() {
-				it = it?it->__m_next() : 0;
+			inline iterator& operator++() {
+				it = it!=NULL?it->__m_next.load() : NULL;
 				return *this;
 			}
-			inline T operator++(int) {
-				iterator next = it?it->__m_next() : 0;
-				*this = next;
-				return next;
+			inline iterator operator++(int) {
+				iterator old = *this;
+				it = it!=NULL?it->__m_next.load() : NULL;
+				return old;
+			}
+			
+			inline bool operator==(const iterator &other) const {
+				return other.it == it;
+			}
+			inline bool operator!=(const iterator &other) const {
+				return other.it != it;
 			}
 			
 			inline T begin() { return *this; }
-			inline T end() { return 0; }
+			inline T end() { return NULL; }
 			
-			inline T& operator*() { return *this; }
-			inline const T& operator*() const { return *this; }
+			inline T* operator*() { return (T*)it; }
+			inline const T* operator*() const { return (const T*)it; }
 			
 			node<T>* it;
 		};
@@ -75,20 +82,27 @@ namespace concurrent {
 				return *this;
 			}
 			
-			inline T& operator++() {
-				it = it?it->__m_next() : 0;
+			inline const_iterator& operator++() {
+				it = it!=NULL?it->__m_next.load() : NULL;
 				return *this;
 			}
-			inline T operator++(int) {
-				const_iterator next = it?it->__m_next() : 0;
-				*this = next;
-				return next;
+			inline const_iterator operator++(int) {
+				const_iterator old = *this;
+				it = it!=NULL?it->__m_next.load() : NULL;
+				return old;
+			}
+			
+			inline bool operator==(const const_iterator &other) const {
+				return other.it == it;
+			}
+			inline bool operator!=(const const_iterator &other) const {
+				return other.it != it;
 			}
 			
 			inline T begin() { return *this; }
-			inline T end() { return 0; }
+			inline T end() { return NULL; }
 			
-			inline const T& operator*() const { return *this; }
+			inline const T* operator*() const { return (const T*)it; }
 			
 			node<T>*const it;
 		};
