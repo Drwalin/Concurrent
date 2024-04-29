@@ -40,7 +40,7 @@ namespace nonconcurrent {
 			}
 		}
 		
-		inline node_stack& operator=(node_stack&&o) { head=o.head; o.head=NULL; }
+		inline node_stack& operator=(node_stack&&o) { head=o.head; o.head=NULL; return *this; }
 		inline node_stack& operator=(const node_stack&) = delete;
 		
 		inline bool empty() const { return !head; }
