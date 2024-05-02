@@ -203,19 +203,19 @@ private:
 	}
 	
 private:
-	
 	std::mutex mutex;
 	const size_t max_buckets;
 	std::atomic<byte_array*> *buckets;
 	size_t *sizes;
+	std::atomic<size_t> buckets_count = 0;
+	
+public:
 	std::atomic<uint64_t> system_allocations_count = 0;
 	std::atomic<uint64_t> system_frees_count = 0;
 	std::atomic<uint64_t> bucket_acquisitions_count = 0;
 	std::atomic<uint64_t> bucket_releases_count = 0;
-	std::atomic<size_t> buckets_count = 0;
 	std::atomic<uint64_t> objects_in_glob = 0;
 	
-public:
 	std::atomic<uint64_t> local_sum_acquisition = 0;
 	std::atomic<uint64_t> local_sum_release = 0;
 	
@@ -231,8 +231,6 @@ class thread_local_pool : public concurrent::node<thread_local_pool<BYTES, OBJEC
 {
 public:
 	
-	bool resident = true;
-	
 	thread_local_pool(concurrent::buckets_pool<BYTES> *buckets_pool) {
 		this->buckets_pool = buckets_pool;
 		buckets_pool->mod_tls_pool(this, true);
@@ -240,7 +238,6 @@ public:
 	~thread_local_pool() {
 		buckets_pool->mod_tls_pool(this, false);
 		release_buckets_to_global();
-		resident = false;
 	}
 	
 	void release_buckets_to_global() {
@@ -256,9 +253,6 @@ public:
 	
 	template<typename T, typename... Args>
 	T *acquire(Args... args) {
-		if (resident == false) {
-			return new(malloc(BYTES)) T(std::move(args)...);
-		}
 		static_assert(sizeof(T) <= BYTES);
 		buckets_pool->local_sum_acquisition++;
 		if (size[0] == 0) {
@@ -275,11 +269,6 @@ public:
 	
 	template<typename T>
 	void release(T *ptr) {
-		if (resident == false) {
-			ptr->~T();
-			free(ptr);
-			return;
-		}
 		buckets_pool->local_sum_release++;
 		ptr->~T();
 		if (size[1] >= OBJECTS_PER_BUCKET) {
