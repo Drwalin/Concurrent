@@ -1,6 +1,6 @@
 /*
  *  Concurrent primitive data structures.
- *  Copyright (C) 2021-2024 Marek Zalewski aka Drwalin
+ *  Copyright (C) 2021-2025 Marek Zalewski aka Drwalin
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -133,6 +133,22 @@ namespace concurrent {
 					std::this_thread::sleep_for(atom_sleep);
 				}
 			}
+		}
+		
+		void wait_for_nanoseconds(int64_t wait_time) {
+			wait_for(std::chrono::nanoseconds(wait_time), std::chrono::microseconds(1));
+		}
+		
+		void wait_for_microseconds(int64_t wait_time) {
+			wait_for(std::chrono::microseconds(wait_time), std::chrono::microseconds(1));
+		}
+		
+		void wait_for_milliseconds(int64_t wait_time) {
+			wait_for(std::chrono::milliseconds(wait_time), std::chrono::microseconds(1));
+		}
+		
+		void wait_for_seconds(double wait_time) {
+			wait_for_microseconds(wait_time*1000.0*1000.0);
 		}
 		
 		bool is_valid() const {
