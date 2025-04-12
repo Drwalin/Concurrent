@@ -68,15 +68,15 @@ inline bool operator!=(point l, point r) { return l.ns != r.ns; }
 inline point operator+(point p, diff d) { return {p.ns + d.ns}; }
 inline point operator-(point p, diff d) { return {p.ns - d.ns}; }
 
-inline point &operator+=(point &p, diff d) { return (p = p + d, p); }
-inline point &operator-=(point &p, diff d) { return (p = p + d, p); }
+inline point &operator+=(point &p, diff d) { p.ns += d.ns; return p; }
+inline point &operator-=(point &p, diff d) { p.ns -= d.ns; return p; }
 
 inline diff operator-(point a, point b) { return {a.ns - b.ns}; }
 inline diff operator-(diff a, diff b) { return {a.ns - b.ns}; }
 inline diff operator+(diff a, diff b) { return {a.ns + b.ns}; }
 
-inline diff &operator-=(diff &a, diff b) { return (a = a - b, a); }
-inline diff &operator+=(diff &a, diff b) { return (a = a + b, a); }
+inline diff &operator+=(diff &a, diff b) { a.ns += b.ns; return a; }
+inline diff &operator-=(diff &a, diff b) { a.ns -= b.ns; return a; }
 
 inline diff operator*(diff a, int v) { return {a.ns * v}; }
 inline diff operator/(diff a, int v) { return {a.ns / v}; }
@@ -85,12 +85,12 @@ inline diff operator/(diff a, float v) { return {int64_t(a.ns / v)}; }
 inline diff operator*(diff a, double v) { return {int64_t(a.ns * v)}; }
 inline diff operator/(diff a, double v) { return {int64_t(a.ns / v)}; }
 
-inline diff &operator*=(diff &a, int v) { return (a = a * v, a); }
-inline diff &operator/=(diff &a, int v) { return (a = a / v, a); }
-inline diff &operator*=(diff &a, float v) { return (a = a * v, a); }
-inline diff &operator/=(diff &a, float v) { return (a = a / v, a); }
-inline diff &operator*=(diff &a, double v) { return (a = a * v, a); }
-inline diff &operator/=(diff &a, double v) { return (a = a / v, a); }
+inline diff &operator*=(diff &a, int v)    { a.ns *= v; return a; }
+inline diff &operator/=(diff &a, int v)    { a.ns /= v; return a; }
+inline diff &operator*=(diff &a, float v)  { a.ns *= v; return a; }
+inline diff &operator/=(diff &a, float v)  { a.ns /= v; return a; }
+inline diff &operator*=(diff &a, double v) { a.ns *= v; return a; }
+inline diff &operator/=(diff &a, double v) { a.ns /= v; return a; }
 
 } // namespace time
 } // namespace concurrent
