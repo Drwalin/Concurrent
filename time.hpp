@@ -13,11 +13,11 @@ namespace concurrent
 namespace time
 {
 struct diff {
-	int64_t ns;
+	int64_t ns = 0;
 };
 
 struct point {
-	int64_t ns;
+	int64_t ns = 0;
 };
 
 point now();
