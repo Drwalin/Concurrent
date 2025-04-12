@@ -7,9 +7,9 @@
 #define CONCURRECT_FUTURE_HPP
 
 #include <memory>
-#include <chrono>
 #include <atomic>
-#include <thread>
+
+#include "time.hpp"
 
 namespace concurrent {
 	template<typename T>
@@ -107,35 +107,33 @@ namespace concurrent {
 			return;
 		}
 		
-		template<typename TT>
-		void wait_for(TT wait_time) {
-			wait_for(wait_time, std::chrono::microseconds(1));
+		void wait_for(time::diff wait_time) {
+			wait_for(wait_time, {1000});
 		}
 		
-		template<typename TT, typename TT2>
-		void wait_for(TT wait_time, TT2 atom_sleep) {
+		void wait_for(time::diff wait_time, time::diff atom_sleep) {
 			if (state.get() != NULL) {
-				auto end = std::chrono::steady_clock::now() + wait_time;
-				while(state->finished.test() == false && end > std::chrono::steady_clock::now()) {
-					std::this_thread::sleep_for(atom_sleep);
+				auto end = time::now() + wait_time;
+				while(state->finished.test() == false && end > time::now()) {
+					time::sleep_for(atom_sleep);
 				}
 			}
 		}
 		
 		void wait_for_nanoseconds(int64_t wait_time) {
-			wait_for(std::chrono::nanoseconds(wait_time), std::chrono::microseconds(1));
+			wait_for(time::nanoseconds(wait_time), time::microseconds(1));
 		}
 		
 		void wait_for_microseconds(int64_t wait_time) {
-			wait_for(std::chrono::microseconds(wait_time), std::chrono::microseconds(1));
+			wait_for(time::microseconds(wait_time), time::microseconds(1));
 		}
 		
 		void wait_for_milliseconds(int64_t wait_time) {
-			wait_for(std::chrono::milliseconds(wait_time), std::chrono::microseconds(1));
+			wait_for(time::milliseconds(wait_time), time::microseconds(1));
 		}
 		
 		void wait_for_seconds(double wait_time) {
-			wait_for_microseconds(wait_time*1000.0*1000.0);
+			wait_for(time::seconds(wait_time), time::microseconds(1));
 		}
 		
 		bool is_valid() const {
