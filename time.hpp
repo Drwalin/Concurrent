@@ -15,10 +15,18 @@ namespace time
 struct diff {
 	int64_t ns = 0;
 	inline constexpr diff operator-() const { return {-ns}; }
+	
+	inline float sec() const { return ns * (1.0f / 1'000'000'000.0f); }
+	inline float msec() const { return ns * (1.0f / 1'000'000.0f); }
+	inline float usec() const { return ns * (1.0f / 1'000.0f); }
 };
 
 struct point {
 	int64_t ns = 0;
+	
+	inline float sec() const { return ns * (1.0f / 1'000'000'000.0f); }
+	inline float msec() const { return ns * (1.0f / 1'000'000.0f); }
+	inline float usec() const { return ns * (1.0f / 1'000.0f); }
 };
 
 point now();
