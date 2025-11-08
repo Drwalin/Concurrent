@@ -17,7 +17,8 @@ namespace time
 {
 point now()
 {
-	return {std::chrono::steady_clock::now().time_since_epoch().count()};
+	auto now = std::chrono::steady_clock::now().time_since_epoch();
+	return {std::chrono::nanoseconds(now).count()};
 }
 
 void sleep_for(diff dt)
